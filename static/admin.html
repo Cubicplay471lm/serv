@@ -179,7 +179,6 @@ async function checkPassword() {
         return;
     }
     try {
-        const result = await apiFetch('/admin/login', 'POST', { password });
         if (password === 'рыбнадзор') {
             sessionStorage.setItem('admin_auth', 'true');
             document.getElementById('loginOverlay').style.display = 'none';
