@@ -503,6 +503,20 @@ async def api_toggle_announcement(ann_id: str):
     db.create_announcement(ann_id, announcements[ann_id])
     return {"status": "success"}
 
+@app.post("/api/admin/login")
+async def admin_login(data: AdminLoginRequest):
+    admin_hash = db.get_admin_password()
+    if not admin_hash:
+        new_hash = hash_password("рыбнадзор")
+        db.data["admin"] = {"password": new_hash}
+        db._save()
+        admin_hash = new_hash
+    
+    if verify_password(data.password, admin_hash):
+        return {"status": "success", "message": "Добро пожаловать, админ!"}
+    else:
+        raise HTTPException(status_code=401, detail="Неверный пароль")
+
 # ===== АДМИН =====
 @app.get("/api/admin/all")
 async def api_get_all():
