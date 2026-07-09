@@ -71,6 +71,7 @@
         .user-item .ubalance {
             font-size:0.8rem; color:#4a8a4a; font-weight:bold;
         }
+        .user-item .nopassport { color:#b89a7a; font-size:0.8rem; }
         .role-tag {
             display:inline-block; background:#f4a460; padding:2px 12px; border-radius:20px; font-size:0.8rem; color:white; font-weight:bold;
         }
@@ -78,6 +79,16 @@
             background:#1e1e1e; color:#d4d4d4; padding:15px; border-radius:12px; font-family:monospace; font-size:11px; overflow-x:auto; max-height:300px;
         }
         .header-flex { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+        .edit-btn {
+            background:#1a6a8a;
+            border:none;
+            color:white;
+            padding:2px 12px;
+            border-radius:12px;
+            cursor:pointer;
+            font-size:0.7rem;
+        }
+        .edit-btn:hover { background:#0a4a6a; }
         @media (max-width:600px) { .header-flex { flex-direction:column; align-items:flex-start; gap:10px; } }
     </style>
 </head>
@@ -95,7 +106,7 @@
     <div class="container">
         <div class="card">
             <h2>👑 АДМИН ПАНЕЛЬ</h2>
-            <div class="stats">🐟 Всё на сервере 🔥</div>
+            <div class="stats">🐟 Всё на сервере 🔥 | Пароли хэшируются 🔐</div>
             <div class="flex">
                 <button onclick="loadData()" class="primary">📥 Загрузить</button>
                 <button onclick="saveData()" class="success">💾 Сохранить</button>
@@ -114,7 +125,7 @@
                 <input type="text" id="newUserLogin" placeholder="Логин" style="flex:1">
                 <input type="password" id="newUserPassword" placeholder="Пароль" style="flex:1">
             </div>
-            <input type="text" id="newUserFullName" placeholder="Полное имя">
+            <input type="text" id="newUserFullName" placeholder="Полное имя (паспорт)">
             <input type="text" id="newUserRole" placeholder="Роль">
             <input type="text" id="newUserBirthDate" placeholder="Дата рождения">
             <button onclick="createUser()" class="primary">👤 Создать</button>
@@ -152,7 +163,7 @@
     </div>
 </div>
 <script>
-const API_URL = 'http://93.115.101.161:9781/api';
+const API_URL = 'http://okak.wisp.byte:9781/api';
 
 async function apiFetch(path, method='GET', data=null) {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
@@ -161,14 +172,21 @@ async function apiFetch(path, method='GET', data=null) {
     return res.json();
 }
 
-function checkPassword() {
-    const pass = document.getElementById('adminPassword').value;
-    if (pass === 'рыбнадзор') {
-        sessionStorage.setItem('admin_auth', 'true');
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('adminContent').style.display = 'block';
-        loadData();
-    } else {
+async function checkPassword() {
+    const password = document.getElementById('adminPassword').value;
+    if (!password) {
+        document.getElementById('loginError').textContent = '❌ Введите пароль';
+        return;
+    }
+    try {
+        const result = await apiFetch('/admin/login', 'POST', { password });
+        if (result.status === 'success') {
+            sessionStorage.setItem('admin_auth', 'true');
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('adminContent').style.display = 'block';
+            loadData();
+        }
+    } catch(e) {
         document.getElementById('loginError').textContent = '❌ Неверный пароль';
     }
 }
@@ -230,11 +248,58 @@ function renderUsers(users) {
     list.innerHTML = keys.map(login => {
         const u = users[login];
         const hasPassport = u.passport && u.passport.fullName;
-        let passportHtml = hasPassport ?
-            `<div style="margin-top:4px;"><span class="upassport">🎫 ${u.passport.fullName}</span><span class="urole">${u.passport.role||'Обычный карасик'}</span><span class="ubalance">💰 ${u.balance||0}</span></div>` :
-            `<div class="nopassport">❌ Нет паспорта</div>`;
-        return `<div class="user-item"><span class="ulogin">👤 ${login}</span><span style="float:right;"><button class="danger" onclick="deleteUser('${login}')" style="font-size:11px; padding:2px 12px;">❌</button></span>${passportHtml}</div>`;
+        let passportHtml = '';
+        if (hasPassport) {
+            passportHtml = `
+                <div style="margin-top:4px;">
+                    <span class="upassport">🎫 ${escapeHtml(u.passport.fullName)}</span>
+                    <span class="urole">${escapeHtml(u.passport.role || 'Обычный карасик')}</span>
+                    <span class="ubalance">💰 ${u.balance || 0}</span>
+                    <button class="edit-btn" onclick="editPassport('${login}')">✏️ Редактировать паспорт</button>
+                </div>
+            `;
+        } else {
+            passportHtml = `
+                <div class="nopassport">❌ Нет паспорта</div>
+                <button class="edit-btn" onclick="editPassport('${login}')">✏️ Добавить паспорт</button>
+            `;
+        }
+        return `
+            <div class="user-item">
+                <span class="ulogin">👤 ${escapeHtml(login)}</span>
+                <span style="float:right;">
+                    <span style="font-size:0.7rem; color:#6b8a9a;">🔑 ${u.password ? 'захеширован' : '—'}</span>
+                    <button class="danger" onclick="deleteUser('${login}')" style="font-size:11px; padding:2px 12px;">❌</button>
+                </span>
+                ${passportHtml}
+            </div>
+        `;
     }).join('');
+}
+
+async function editPassport(login) {
+    try {
+        const data = await apiFetch(`/users/${login}`);
+        const user = data.user;
+        if (!user) { alert('Пользователь не найден'); return; }
+        const passport = user.passport || {};
+        const fullName = prompt('Полное имя:', passport.fullName || '');
+        if (fullName === null) return;
+        const role = prompt('Роль:', passport.role || 'Обычный карасик');
+        if (role === null) return;
+        const birthDate = prompt('Дата рождения:', passport.birthDate || '');
+        if (birthDate === null) return;
+        await apiFetch(`/users/${login}/passport`, 'PUT', {
+            fullName: fullName || 'Неизвестный',
+            role: role || 'Обычный карасик',
+            birthDate: birthDate || ''
+        });
+        loadData();
+        document.getElementById('statusMsg').innerHTML = `<div class="success-msg">✅ Паспорт пользователя ${login} обновлён!</div>`;
+        setTimeout(() => document.getElementById('statusMsg').innerHTML = '', 3000);
+    } catch(e) {
+        alert('❌ Ошибка: ' + e.message);
+    }
 }
 
 function renderBalance(users) {
@@ -253,7 +318,7 @@ function renderAnnouncements(announcements) {
     if (keys.length === 0) { list.innerHTML = '<p style="text-align:center;">📭 Нет объявлений</p>'; return; }
     list.innerHTML = keys.map(id => {
         const a = announcements[id];
-        return `<div class="item"><strong>📌 ${a.title}</strong><span style="float:right;"><button class="secondary" onclick="toggleAnnouncement('${id}')" style="font-size:11px;">${a.active!==false ? '🔘 Скрыть' : '✅ Показать'}</button><button class="danger" onclick="deleteAnnouncement('${id}')" style="font-size:11px;">🗑️</button></span><p style="margin:8px 0;">${a.text}</p><small>📅 ${a.date||'Недавно'} | ${a.active!==false ? '🟢 Активно' : '⚫ Скрыто'}</small></div>`;
+        return `<div class="item"><strong>📌 ${escapeHtml(a.title)}</strong><span style="float:right;"><button class="secondary" onclick="toggleAnnouncement('${id}')" style="font-size:11px;">${a.active!==false ? '🔘 Скрыть' : '✅ Показать'}</button><button class="danger" onclick="deleteAnnouncement('${id}')" style="font-size:11px;">🗑️</button></span><p style="margin:8px 0;">${escapeHtml(a.text)}</p><small>📅 ${a.date||'Недавно'} | ${a.active!==false ? '🟢 Активно' : '⚫ Скрыто'}</small></div>`;
     }).join('');
 }
 
@@ -263,7 +328,7 @@ function renderChats(chats) {
     if (keys.length === 0) { list.innerHTML = '<p style="text-align:center;">💬 Нет чатов</p>'; return; }
     list.innerHTML = keys.map(id => {
         const c = chats[id];
-        return `<div class="item" style="border-left-color:#1a6a8a;"><strong>💬 ${c.name}</strong><span style="float:right;"><button class="danger" onclick="deleteChat('${id}')" style="font-size:11px;">🗑️</button></span><div style="font-size:0.8rem; color:#6b8a9a;">👥 ${c.members ? c.members.join(', ') : '—'}</div></div>`;
+        return `<div class="item" style="border-left-color:#1a6a8a;"><strong>💬 ${escapeHtml(c.name)}</strong><span style="float:right;"><button class="danger" onclick="deleteChat('${id}')" style="font-size:11px;">🗑️</button></span><div style="font-size:0.8rem; color:#6b8a9a;">👥 ${c.members ? c.members.join(', ') : '—'}</div></div>`;
     }).join('');
 }
 
@@ -274,7 +339,7 @@ function renderTransactions(transactions) {
     const sorted = keys.sort((a,b) => (transactions[b].timestamp||0) - (transactions[a].timestamp||0));
     list.innerHTML = sorted.map(id => {
         const tx = transactions[id];
-        return `<div class="item" style="border-left-color:#4a8a4a;"><strong>${tx.from} → ${tx.to}</strong><span style="float:right;"><span style="font-weight:bold; color:#4a8a4a;">💰 ${tx.amount}</span><button class="danger" onclick="deleteTransaction('${id}')" style="font-size:11px;">🗑️</button></span><div style="font-size:0.8rem; color:#6b8a9a;">📅 ${tx.timestamp ? new Date(tx.timestamp).toLocaleString() : '—'}</div></div>`;
+        return `<div class="item" style="border-left-color:#4a8a4a;"><strong>${escapeHtml(tx.from)} → ${escapeHtml(tx.to)}</strong><span style="float:right;"><span style="font-weight:bold; color:#4a8a4a;">💰 ${tx.amount}</span><button class="danger" onclick="deleteTransaction('${id}')" style="font-size:11px;">🗑️</button></span><div style="font-size:0.8rem; color:#6b8a9a;">📅 ${tx.timestamp ? new Date(tx.timestamp).toLocaleString() : '—'}</div></div>`;
     }).join('');
 }
 
@@ -352,6 +417,11 @@ async function deleteChat(id) {
 async function deleteTransaction(id) {
     if (!confirm('Удалить транзакцию?')) return;
     loadData();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
 }
 
 if (sessionStorage.getItem('admin_auth') === 'true') {

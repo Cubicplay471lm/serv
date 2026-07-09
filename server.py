@@ -79,6 +79,9 @@ class AnnouncementRequest(BaseModel):
     title: str
     text: str
 
+class AdminLoginRequest(BaseModel):
+    password: str
+
 # ===== БАЗА ДАННЫХ =====
 class Database:
     def __init__(self, path="karasik_data.json"):
@@ -89,11 +92,25 @@ class Database:
         if os.path.exists(self.path):
             with open(self.path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        return {"users": {}, "chats": {}, "posts": {}, "transactions": {}, "announcements": {}}
+        # Создаём базу с хэшем админ-пароля
+        admin_hash = bcrypt.hashpw("рыбнадзор".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        return {
+            "users": {},
+            "chats": {},
+            "posts": {},
+            "transactions": {},
+            "announcements": {},
+            "admin": {
+                "password": admin_hash
+            }
+        }
     
     def _save(self):
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, ensure_ascii=False, indent=2)
+    
+    def get_admin_password(self):
+        return self.data.get("admin", {}).get("password", "")
     
     def get_user(self, login: str):
         return self.data["users"].get(login)
@@ -176,7 +193,16 @@ class Database:
             self._save()
     
     def clear_all(self):
-        self.data = {"users": {}, "chats": {}, "posts": {}, "transactions": {}, "announcements": {}}
+        # Сохраняем админ-пароль
+        admin_hash = self.data.get("admin", {}).get("password", "")
+        self.data = {
+            "users": {},
+            "chats": {},
+            "posts": {},
+            "transactions": {},
+            "announcements": {},
+            "admin": {"password": admin_hash}
+        }
         self._save()
 
 db = Database("karasik_data.json")
@@ -187,6 +213,22 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+
+# ===== АДМИН ЛОГИН (С ХЭШОМ) =====
+@app.post("/api/admin/login")
+async def admin_login(data: AdminLoginRequest):
+    admin_hash = db.get_admin_password()
+    if not admin_hash:
+        # Если нет хэша — создаём
+        new_hash = hash_password("рыбнадзор")
+        db.data["admin"] = {"password": new_hash}
+        db._save()
+        admin_hash = new_hash
+    
+    if verify_password(data.password, admin_hash):
+        return {"status": "success", "message": "Добро пожаловать, админ!"}
+    else:
+        raise HTTPException(status_code=401, detail="Неверный пароль")
 
 # ===== API =====
 @app.post("/api/register")
@@ -241,6 +283,15 @@ async def api_delete_user(login: str):
     if not db.get_user(login):
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     db.delete_user(login)
+    return {"status": "success"}
+
+@app.put("/api/users/{login}/passport")
+async def update_passport(login: str, passport: dict):
+    user = db.get_user(login)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    user["passport"] = passport
+    db.update_user(login, user)
     return {"status": "success"}
 
 @app.post("/api/admin/balance")
@@ -472,5 +523,5 @@ if __name__ == "__main__":
     print("🐟 Karasik Talk Server запущен!")
     print("📋 Главная: http://localhost:8000")
     print("👑 Админка: http://localhost:8000/admin")
-    print("🔑 Пароль админа: рыбнадзор")
+    print("🔑 Пароль админа: рыбнадзор (хэшируется в базе)")
     uvicorn.run(app, host="0.0.0.0", port=9781)
