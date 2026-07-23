@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TG User Saver</title>
     <style>
-        /* ----------------------------------------------
-            СТИЛИ
-        ------------------------------------------------ */
         * {
             margin: 0;
             padding: 0;
@@ -217,11 +214,9 @@
 <body>
 
     <div class="container">
-        <!-- ЗАГОЛОВОК -->
         <h1>TG <span>User</span> Saver</h1>
         <p class="subtitle">Введи свой Telegram username — он сохранится в Firebase</p>
 
-        <!-- ФОРМА -->
         <div class="form-group">
             <label for="tgInput">Telegram username</label>
             <input
@@ -234,12 +229,10 @@
 
         <button class="btn btn-primary" id="saveBtn">💾 Сохранить</button>
 
-        <!-- СТАТУС -->
         <div class="status" id="status"></div>
 
         <hr class="divider" />
 
-        <!-- СПИСОК ПОЛЬЗОВАТЕЛЕЙ -->
         <div class="user-list-title">
             📋 Сохранённые пользователи
             <span id="userCount">0</span>
@@ -258,27 +251,23 @@
         </div>
     </div>
 
-    <!-- ============================================================
-         FIREBASE + ЛОГИКА
-    ============================================================ -->
     <script>
-        // -----------------------------------------------------------------
-        //  1. НАСТРОЙКА FIREBASE
-        // -----------------------------------------------------------------
+        // ============================================================
+        //  ТВОЙ FIREBASE — karasik-talk
+        // ============================================================
         const firebaseConfig = {
-            apiKey: "AIzaSyDummyKey_ReplaceWithReal",          // ← ЗАМЕНИ
-            authDomain: "your-project.firebaseapp.com",         // ← ЗАМЕНИ
-            databaseURL: "https://your-project-default-rtdb.firebaseio.com", // ← ЗАМЕНИ
-            projectId: "your-project",                          // ← ЗАМЕНИ
-            storageBucket: "your-project.appspot.com",         // ← ЗАМЕНИ
-            messagingSenderId: "123456789",                    // ← ЗАМЕНИ
-            appId: "1:123456789:web:abcdef"                    // ← ЗАМЕНИ
+            apiKey: "AIzaSyDummyKey_ReplaceWithReal",
+            authDomain: "karasik-talk.firebaseapp.com",
+            databaseURL: "https://karasik-talk-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "karasik-talk",
+            storageBucket: "karasik-talk.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
         };
 
         // -----------------------------------------------------------------
-        //  2. ПОДКЛЮЧАЕМ FIREBASE (если ещё не загружены)
+        //  2. ПОДКЛЮЧАЕМ FIREBASE
         // -----------------------------------------------------------------
-        // Если Firebase SDK не загружен — подгружаем.
         if (typeof firebase === 'undefined') {
             const script = document.createElement('script');
             script.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js';
@@ -288,7 +277,6 @@
             scriptDb.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js';
             document.head.appendChild(scriptDb);
 
-            // Ждём загрузки SDK
             let ready = false;
             script.onload = () => {
                 if (typeof firebase !== 'undefined' && firebase.database) {
@@ -301,12 +289,11 @@
                 }
             };
 
-            // Запасной таймер
             setTimeout(() => {
                 if (typeof firebase !== 'undefined' && firebase.database) {
                     initFirebase();
                 } else {
-                    showStatus('❌ Не удалось загрузить Firebase SDK. Проверь интернет.', 'error');
+                    showStatus('❌ Не удалось загрузить Firebase SDK', 'error');
                 }
             }, 5000);
         } else {
@@ -314,7 +301,7 @@
         }
 
         // -----------------------------------------------------------------
-        //  3. ИНИЦИАЛИЗАЦИЯ FIREBASE
+        //  3. ИНИЦИАЛИЗАЦИЯ
         // -----------------------------------------------------------------
         let database = null;
         let isFirebaseReady = false;
@@ -326,16 +313,16 @@
                 }
                 database = firebase.database();
                 isFirebaseReady = true;
-                console.log('✅ Firebase инициализирован');
+                console.log('✅ Firebase инициализирован (karasik-talk)');
                 loadUsers();
             } catch (e) {
                 console.error('❌ Ошибка Firebase:', e);
-                showStatus('❌ Ошибка подключения к Firebase: ' + e.message, 'error');
+                showStatus('❌ Ошибка: ' + e.message, 'error');
             }
         }
 
         // -----------------------------------------------------------------
-        //  4. DOM-ЭЛЕМЕНТЫ
+        //  4. DOM
         // -----------------------------------------------------------------
         const tgInput = document.getElementById('tgInput');
         const saveBtn = document.getElementById('saveBtn');
@@ -345,13 +332,12 @@
         const userCount = document.getElementById('userCount');
 
         // -----------------------------------------------------------------
-        //  5. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+        //  5. ВСПОМОГАТЕЛЬНЫЕ
         // -----------------------------------------------------------------
         function showStatus(msg, type = '') {
             statusEl.textContent = msg;
             statusEl.className = 'status';
             if (type) statusEl.classList.add(type);
-            // Автоскрытие через 4 секунды
             clearTimeout(statusEl._timer);
             statusEl._timer = setTimeout(() => {
                 statusEl.className = 'status';
@@ -377,11 +363,11 @@
         }
 
         // -----------------------------------------------------------------
-        //  6. СОХРАНЕНИЕ ПОЛЬЗОВАТЕЛЯ
+        //  6. СОХРАНЕНИЕ
         // -----------------------------------------------------------------
         function saveUser() {
             if (!isFirebaseReady) {
-                showStatus('⏳ Firebase ещё не готов, подожди...', 'loading');
+                showStatus('⏳ Firebase ещё не готов...', 'loading');
                 return;
             }
 
@@ -398,12 +384,11 @@
                 return;
             }
 
-            // Блокируем кнопку
             saveBtn.disabled = true;
             saveBtn.textContent = '⏳ Сохранение...';
             showStatus('⏳ Отправка...', 'loading');
 
-            const newUserRef = database.ref('users').push();
+            const newUserRef = database.ref('tg_users').push();
             const userData = {
                 username: username,
                 raw: raw,
@@ -419,7 +404,7 @@
                     loadUsers();
                 })
                 .catch((err) => {
-                    console.error('❌ Ошибка сохранения:', err);
+                    console.error('❌ Ошибка:', err);
                     showStatus('❌ Ошибка: ' + err.message, 'error');
                 })
                 .finally(() => {
@@ -429,7 +414,7 @@
         }
 
         // -----------------------------------------------------------------
-        //  7. ЗАГРУЗКА СПИСКА ПОЛЬЗОВАТЕЛЕЙ
+        //  7. ЗАГРУЗКА
         // -----------------------------------------------------------------
         function loadUsers() {
             if (!isFirebaseReady) {
@@ -437,7 +422,7 @@
                 return;
             }
 
-            database.ref('users').once('value')
+            database.ref('tg_users').once('value')
                 .then((snapshot) => {
                     const data = snapshot.val();
                     if (!data) {
@@ -446,13 +431,11 @@
                         return;
                     }
 
-                    // Превращаем объект в массив
                     const users = Object.entries(data).map(([key, value]) => ({
                         id: key,
                         ...value
                     }));
 
-                    // Сортируем по времени (новые сверху)
                     users.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
                     userCount.textContent = users.length;
@@ -482,7 +465,7 @@
         }
 
         // -----------------------------------------------------------------
-        //  8. ОЧИСТКА ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+        //  8. ОЧИСТКА
         // -----------------------------------------------------------------
         function clearAllUsers() {
             if (!isFirebaseReady) {
@@ -490,13 +473,13 @@
                 return;
             }
 
-            if (!confirm('🗑️ Точно удалить ВСЕХ пользователей из базы?')) return;
+            if (!confirm('🗑️ Точно удалить ВСЕХ пользователей?')) return;
 
             clearBtn.disabled = true;
             clearBtn.textContent = '⏳ Удаление...';
             showStatus('⏳ Удаление...', 'loading');
 
-            database.ref('users').remove()
+            database.ref('tg_users').remove()
                 .then(() => {
                     showStatus('✅ Все пользователи удалены', 'success');
                     loadUsers();
@@ -525,15 +508,14 @@
 
         clearBtn.addEventListener('click', clearAllUsers);
 
-        // Если Firebase уже был готов до загрузки скрипта
         if (isFirebaseReady) {
             loadUsers();
         }
 
-        // Фокус на поле ввода при загрузке
         setTimeout(() => tgInput.focus(), 500);
 
         console.log('🚀 TG User Saver загружен!');
+        console.log('🔥 Firebase: karasik-talk-default-rtdb');
     </script>
 
 </body>
