@@ -1,1 +1,540 @@
-@kt_471 TG пиши сюда
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TG User Saver</title>
+    <style>
+        /* ----------------------------------------------
+            СТИЛИ
+        ------------------------------------------------ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f0f1a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #1a1a2e;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid #2a2a4a;
+        }
+
+        h1 {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        h1 span {
+            color: #26a7de;
+        }
+
+        .subtitle {
+            color: #8888aa;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #ccccdd;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 2px solid #2a2a4a;
+            background: #0f0f1a;
+            color: #ffffff;
+            font-size: 16px;
+            transition: border 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #26a7de;
+        }
+
+        .form-group input::placeholder {
+            color: #555577;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-primary {
+            background: #26a7de;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #1e8fc0;
+            transform: scale(1.01);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-danger {
+            background: #de2644;
+            color: #ffffff;
+        }
+
+        .btn-danger:hover {
+            background: #c01e3a;
+        }
+
+        .status {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            display: block;
+            background: #1a3a2a;
+            color: #66dd88;
+            border: 1px solid #2a5a3a;
+        }
+
+        .status.error {
+            display: block;
+            background: #3a1a1a;
+            color: #dd6666;
+            border: 1px solid #5a2a2a;
+        }
+
+        .status.loading {
+            display: block;
+            background: #1a2a3a;
+            color: #66aadd;
+            border: 1px solid #2a4a5a;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #2a2a4a;
+            margin: 28px 0 20px;
+        }
+
+        .user-list-title {
+            color: #ccccdd;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-list-title span {
+            background: #2a2a4a;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #8888aa;
+        }
+
+        #userList {
+            list-style: none;
+            padding: 0;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        #userList li {
+            background: #0f0f1a;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            color: #ccccdd;
+            font-size: 14px;
+            border-left: 3px solid #26a7de;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-break: break-all;
+        }
+
+        #userList li .time {
+            color: #555577;
+            font-size: 11px;
+        }
+
+        .empty-msg {
+            color: #555577;
+            text-align: center;
+            font-size: 14px;
+            padding: 20px 0;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #333355;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- ЗАГОЛОВОК -->
+        <h1>TG <span>User</span> Saver</h1>
+        <p class="subtitle">Введи свой Telegram username — он сохранится в Firebase</p>
+
+        <!-- ФОРМА -->
+        <div class="form-group">
+            <label for="tgInput">Telegram username</label>
+            <input
+                type="text"
+                id="tgInput"
+                placeholder="Например: @durov или durov"
+                autocomplete="off"
+            />
+        </div>
+
+        <button class="btn btn-primary" id="saveBtn">💾 Сохранить</button>
+
+        <!-- СТАТУС -->
+        <div class="status" id="status"></div>
+
+        <hr class="divider" />
+
+        <!-- СПИСОК ПОЛЬЗОВАТЕЛЕЙ -->
+        <div class="user-list-title">
+            📋 Сохранённые пользователи
+            <span id="userCount">0</span>
+        </div>
+
+        <ul id="userList">
+            <li class="empty-msg">Пока никого нет :(</li>
+        </ul>
+
+        <button class="btn btn-danger" id="clearBtn" style="margin-top:12px;">
+            🗑️ Очистить всех
+        </button>
+
+        <div class="footer">
+            Данные хранятся в Firebase Realtime Database
+        </div>
+    </div>
+
+    <!-- ============================================================
+         FIREBASE + ЛОГИКА
+    ============================================================ -->
+    <script>
+        // -----------------------------------------------------------------
+        //  1. НАСТРОЙКА FIREBASE
+        // -----------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyDummyKey_ReplaceWithReal",          // ← ЗАМЕНИ
+            authDomain: "your-project.firebaseapp.com",         // ← ЗАМЕНИ
+            databaseURL: "https://your-project-default-rtdb.firebaseio.com", // ← ЗАМЕНИ
+            projectId: "your-project",                          // ← ЗАМЕНИ
+            storageBucket: "your-project.appspot.com",         // ← ЗАМЕНИ
+            messagingSenderId: "123456789",                    // ← ЗАМЕНИ
+            appId: "1:123456789:web:abcdef"                    // ← ЗАМЕНИ
+        };
+
+        // -----------------------------------------------------------------
+        //  2. ПОДКЛЮЧАЕМ FIREBASE (если ещё не загружены)
+        // -----------------------------------------------------------------
+        // Если Firebase SDK не загружен — подгружаем.
+        if (typeof firebase === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js';
+            document.head.appendChild(script);
+
+            const scriptDb = document.createElement('script');
+            scriptDb.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js';
+            document.head.appendChild(scriptDb);
+
+            // Ждём загрузки SDK
+            let ready = false;
+            script.onload = () => {
+                if (typeof firebase !== 'undefined' && firebase.database) {
+                    initFirebase();
+                }
+            };
+            scriptDb.onload = () => {
+                if (typeof firebase !== 'undefined' && firebase.database) {
+                    initFirebase();
+                }
+            };
+
+            // Запасной таймер
+            setTimeout(() => {
+                if (typeof firebase !== 'undefined' && firebase.database) {
+                    initFirebase();
+                } else {
+                    showStatus('❌ Не удалось загрузить Firebase SDK. Проверь интернет.', 'error');
+                }
+            }, 5000);
+        } else {
+            initFirebase();
+        }
+
+        // -----------------------------------------------------------------
+        //  3. ИНИЦИАЛИЗАЦИЯ FIREBASE
+        // -----------------------------------------------------------------
+        let database = null;
+        let isFirebaseReady = false;
+
+        function initFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                database = firebase.database();
+                isFirebaseReady = true;
+                console.log('✅ Firebase инициализирован');
+                loadUsers();
+            } catch (e) {
+                console.error('❌ Ошибка Firebase:', e);
+                showStatus('❌ Ошибка подключения к Firebase: ' + e.message, 'error');
+            }
+        }
+
+        // -----------------------------------------------------------------
+        //  4. DOM-ЭЛЕМЕНТЫ
+        // -----------------------------------------------------------------
+        const tgInput = document.getElementById('tgInput');
+        const saveBtn = document.getElementById('saveBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusEl = document.getElementById('status');
+        const userList = document.getElementById('userList');
+        const userCount = document.getElementById('userCount');
+
+        // -----------------------------------------------------------------
+        //  5. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+        // -----------------------------------------------------------------
+        function showStatus(msg, type = '') {
+            statusEl.textContent = msg;
+            statusEl.className = 'status';
+            if (type) statusEl.classList.add(type);
+            // Автоскрытие через 4 секунды
+            clearTimeout(statusEl._timer);
+            statusEl._timer = setTimeout(() => {
+                statusEl.className = 'status';
+            }, 4000);
+        }
+
+        function formatDate(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            return d.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function normalizeUsername(input) {
+            let name = input.trim();
+            if (name.startsWith('@')) name = name.substring(1);
+            return name;
+        }
+
+        // -----------------------------------------------------------------
+        //  6. СОХРАНЕНИЕ ПОЛЬЗОВАТЕЛЯ
+        // -----------------------------------------------------------------
+        function saveUser() {
+            if (!isFirebaseReady) {
+                showStatus('⏳ Firebase ещё не готов, подожди...', 'loading');
+                return;
+            }
+
+            const raw = tgInput.value.trim();
+            if (!raw) {
+                showStatus('⚠️ Введите username', 'error');
+                tgInput.focus();
+                return;
+            }
+
+            const username = normalizeUsername(raw);
+            if (username.length < 2) {
+                showStatus('⚠️ Слишком короткий username', 'error');
+                return;
+            }
+
+            // Блокируем кнопку
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ Сохранение...';
+            showStatus('⏳ Отправка...', 'loading');
+
+            const newUserRef = database.ref('users').push();
+            const userData = {
+                username: username,
+                raw: raw,
+                timestamp: Date.now(),
+                date: new Date().toISOString()
+            };
+
+            newUserRef.set(userData)
+                .then(() => {
+                    showStatus(`✅ @${username} добавлен!`, 'success');
+                    tgInput.value = '';
+                    tgInput.focus();
+                    loadUsers();
+                })
+                .catch((err) => {
+                    console.error('❌ Ошибка сохранения:', err);
+                    showStatus('❌ Ошибка: ' + err.message, 'error');
+                })
+                .finally(() => {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '💾 Сохранить';
+                });
+        }
+
+        // -----------------------------------------------------------------
+        //  7. ЗАГРУЗКА СПИСКА ПОЛЬЗОВАТЕЛЕЙ
+        // -----------------------------------------------------------------
+        function loadUsers() {
+            if (!isFirebaseReady) {
+                userList.innerHTML = '<li class="empty-msg">⏳ Загрузка...</li>';
+                return;
+            }
+
+            database.ref('users').once('value')
+                .then((snapshot) => {
+                    const data = snapshot.val();
+                    if (!data) {
+                        userList.innerHTML = '<li class="empty-msg">Пока никого нет :(</li>';
+                        userCount.textContent = '0';
+                        return;
+                    }
+
+                    // Превращаем объект в массив
+                    const users = Object.entries(data).map(([key, value]) => ({
+                        id: key,
+                        ...value
+                    }));
+
+                    // Сортируем по времени (новые сверху)
+                    users.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+                    userCount.textContent = users.length;
+
+                    if (users.length === 0) {
+                        userList.innerHTML = '<li class="empty-msg">Пока никого нет :(</li>';
+                        return;
+                    }
+
+                    let html = '';
+                    users.forEach((u) => {
+                        const name = u.username || u.raw || 'unknown';
+                        const time = u.timestamp ? formatDate(u.timestamp) : '';
+                        html += `
+                            <li>
+                                <span>@${name}</span>
+                                <span class="time">${time}</span>
+                            </li>
+                        `;
+                    });
+                    userList.innerHTML = html;
+                })
+                .catch((err) => {
+                    console.error('❌ Ошибка загрузки:', err);
+                    userList.innerHTML = '<li class="empty-msg">❌ Ошибка загрузки</li>';
+                });
+        }
+
+        // -----------------------------------------------------------------
+        //  8. ОЧИСТКА ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+        // -----------------------------------------------------------------
+        function clearAllUsers() {
+            if (!isFirebaseReady) {
+                showStatus('⏳ Firebase не готов', 'error');
+                return;
+            }
+
+            if (!confirm('🗑️ Точно удалить ВСЕХ пользователей из базы?')) return;
+
+            clearBtn.disabled = true;
+            clearBtn.textContent = '⏳ Удаление...';
+            showStatus('⏳ Удаление...', 'loading');
+
+            database.ref('users').remove()
+                .then(() => {
+                    showStatus('✅ Все пользователи удалены', 'success');
+                    loadUsers();
+                })
+                .catch((err) => {
+                    console.error('❌ Ошибка удаления:', err);
+                    showStatus('❌ Ошибка: ' + err.message, 'error');
+                })
+                .finally(() => {
+                    clearBtn.disabled = false;
+                    clearBtn.textContent = '🗑️ Очистить всех';
+                });
+        }
+
+        // -----------------------------------------------------------------
+        //  9. СОБЫТИЯ
+        // -----------------------------------------------------------------
+        saveBtn.addEventListener('click', saveUser);
+
+        tgInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveUser();
+            }
+        });
+
+        clearBtn.addEventListener('click', clearAllUsers);
+
+        // Если Firebase уже был готов до загрузки скрипта
+        if (isFirebaseReady) {
+            loadUsers();
+        }
+
+        // Фокус на поле ввода при загрузке
+        setTimeout(() => tgInput.focus(), 500);
+
+        console.log('🚀 TG User Saver загружен!');
+    </script>
+
+</body>
+</html>
